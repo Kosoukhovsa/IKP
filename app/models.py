@@ -17,6 +17,7 @@ class Users(db.Model, UserMixin):
     description = db.Column(db.String(100))
     email = db.Column(db.String(100),index=True, unique=True)
     email1 = db.Column(db.String(100),index=True, unique=True)
+    email2 = db.Column(db.String(100),index=True, unique=True)
     password_hash=db.Column(db.String(128))
 
     def __repr__(self):
