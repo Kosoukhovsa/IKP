@@ -32,13 +32,48 @@
                     </li>
                     <li class="nav-item dropdown">
                       <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Ввод данных
+                        Администрирование
                       </a>
                       <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="{{url_for('main.patient_data_enter')}}">Ведение пациентов</a>
-                        <!--<a class="dropdown-item" href="#">Ввод паспортных данных</a>-->
-                        <a class="dropdown-item" href="#">Заглушка 1</a>
-                        <a class="dropdown-item" href="#">Заглушка 2</a>
+                          <a class="dropdown-item" href="#">Пользователи</a>
+                          <a class="dropdown-item" href="#">Роли</a>
+                      </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Справочники
+                      </a>
+                      <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                          <a class="dropdown-item" href="#">Клиники</a>
+                          <a class="dropdown-item" href="#">Группы исследования</a>
+                          <a class="dropdown-item" href="#">Причины исключения из исследования</a>
+                          <a class="dropdown-item" href="#">Диагнозы</a>
+                          <a class="dropdown-item" href="#">Врачи клиники</a>
+                          <a class="dropdown-item" href="#">Протезы</a>
+                      </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Работа с пациентами
+                      </a>
+                      <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <!--
+                        <a class="dropdown-item" href="{{url_for('main.patient_data_enter')}}">
+                          Работа с пациентами
+                        </a>
+                        -->
+                        <a class="dropdown-item" href="#">Поиск истории болезни</a>
+                        <a class="dropdown-item" href="#">Ввод новой истории болезни</a>
+                      </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Анализ данных
+                      </a>
+                      <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="#">Анализ пациентов в группе</a>
+                        <a class="dropdown-item" href="#">Сравнительный анализ между группами</a>
+                        <a class="dropdown-item" href="#">Выгрузка данных</a>
                       </div>
                     </li>
                 </ul>
