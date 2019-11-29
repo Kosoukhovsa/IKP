@@ -11,7 +11,7 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', 'rg$5J8YqvR')
     #FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
     #FLASKY_MAIL_SENDER = 'Flasky Admin <robotstatmail@gmail.com>'
-    FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN',['robotstatmail@gmail.com'])
+    MAIL_ADMIN = os.environ.get('MAIL_ADMIN','ikpservicemail@gmail.com')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     @staticmethod

@@ -1,68 +1,183 @@
-from app import db, login
+from app import db, login_manager
+from flask import current_app
 from werkzeug import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from hashlib import md5
+#from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+import jwt
+from time import time
+from datetime import datetime
 
 
-from app import db, login
-
-
-@login.user_loader
+@login_manager.user_loader
 def load_user(id):
     return Users.query.get(int(id))
+
+
+class UserRoles(db.Model):
+    __tablename__= 'UserRoles'
+    id = db.Column(db.Integer(), primary_key = True)
+    user = db.Column(db.Integer(), db.ForeignKey('Users.id'))
+    role = db.Column(db.Integer(), db.ForeignKey('Roles.id'))
+    time_created = db.Column(db.DateTime(), default=datetime.utcnow())
+
+    @staticmethod
+    def insert_user_roles():
+        user_roles = {"admin":"ADMIN",
+                "doctor":"HIST_W",
+                "researcher":"DATA_R",
+                "researcher":"DATA_D"}
+        for (k,v) in user_roles.items():
+            user_role=UserRoles()
+            user_role.user=Users.query.filter_by(username=k).first().id
+            user_role.role=Roles.query.filter_by(permissions=v).first().id
+            user_role.time_created = datetime.utcnow()
+            db.session.add(user_role)
+        db.session.commit()
+
 
 class Users(db.Model, UserMixin):
     __tablename__ = 'Users'
     id = db.Column(db.Integer(), primary_key=True)
-    description = db.Column(db.String(100))
+    username = db.Column(db.String(100))
     email = db.Column(db.String(100),index=True, unique=True)
-    email1 = db.Column(db.String(100),index=True, unique=True)
-    email2 = db.Column(db.String(100),index=True, unique=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
+    time_create = db.Column(db.DateTime(), default=datetime.utcnow())
+    password=db.Column(db.String(100))
     password_hash=db.Column(db.String(128))
+    last_visit = db.Column(db.DateTime(), default=datetime.utcnow())
+    confirmed=db.Column(db.Boolean(), default=False)
+    roles = db.relationship('UserRoles', foreign_keys=[UserRoles.user],
+                            backref=db.backref('users', lazy='joined'),
+                            lazy='dynamic')
 
     def __repr__(self):
-        return f'Пользователь {description}'
+        return f'Пользователь {self.username}'
 
+    #@property
+    #def password(self):
+    #    raise AttributeError('password is not a readable attribute')
+
+    #@password.setter
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return(check_password_hash(self.password_hash, password))
 
+    def get_reset_password_token(self, expires_in=600):
+        return jwt.encode(
+            {'reset_password':self.id, 'exp':time() + expires_in},
+            current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+
+    @staticmethod
+    def verify_reset_password_token(token):
+        try:
+            id= jwt.decode(token, current_app.config['SECRET_KEY'],
+                            algorithms=['HS256'])['reset_password']
+        except:
+            return
+        return Users.query.get(id)
+
+
+    @staticmethod
+    def insert_users():
+        users = {"admin":{"username":"admin","email":"ikpservicemail@gmail.com","password":"admin","clinic":"1"},
+                "doctor":{"username":"doctor","email":"ikp_doctor@gmail.com","password":"doctor","clinic":"1"},
+            "researcher":{"username":"researcher","email":"ikp_researcher@gmail.com","password":"researcher","clinic":"1"}}
+        for (k,v) in users.items():
+            user=Users(username=v['username'],email=v['email'],password=v['password'])
+            user.set_password(v["password"])
+            user.time_create = datetime.utcnow()
+            user.clinic = Clinics.query.get(v["clinic"]).id
+            db.session.add(user)
+        db.session.commit()
+
+    def has_permissions(self, permission):
+        if self.is_admin():
+            return True
+        user_role = UserRoles.query.filter_by(user=current_user.id, role=Roles.query.filter_by(permissions=permission).first().id).first()
+        if user_role is None:
+            return False
+        return True
+
+    def is_admin(self):
+        current_user_is_admin = UserRoles.query.filter_by(user=current_user.id, role = Roles.query.filter_by(is_admin = True).first().id).first()
+        if current_user_is_admin is None:
+            return False
+        return True
+
+    def ping(self):
+        self.last_visit = datetime.utcnow()
+        db.session.add(self)
+        db.session.commit()
+
+
+class Roles(db.Model):
+    __tablename__ = 'Roles'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=True)
+    permissions = db.Column(db.String(10), index=True)
+    is_admin = db.Column(db.Boolean(), index=True)
+    users = db.relationship('UserRoles', foreign_keys=[UserRoles.role],
+                            backref=db.backref('roles', lazy='joined'),
+                            lazy='dynamic')
+
+    @staticmethod
+    def insert_roles():
+        roles={'Ведение справочников':{'permission':'REF_W', 'is_admin':False},
+               'Просмотр справочников':{'permission':'REF_R', 'is_admin':False},
+               'Ведение истории болезни':{'permission':'HIST_W', 'is_admin':False},
+               'Чтение истории болезни':{'permission':'HIST_R', 'is_admin':False},
+               'Отчеты просмотр':{'permission':'REP_R', 'is_admin':False},
+               'Отчеты выгрузка':{'permission':'REP_D', 'is_admin':False},
+               'Анализ данных просмотр':{'permission':'DATA_R', 'is_admin':False},
+               'Анализ данных выгрузка':{'permission':'DATA_D', 'is_admin':False},
+               'Администрирование':{'permission':'ADMIN', 'is_admin':True}}
+
+        for (k,v) in roles.items():
+            role = Roles.query.filter_by(description=k).first()
+            if role is None:
+                role = Roles(description=k, permissions=v['permission'],is_admin=v['is_admin'])
+                db.session.add(role)
+        db.session.commit()
 
 
 class Clinics(db.Model):
     __tablename__ = 'Clinics'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100))
-    robots = db.relationship('Robots',backref='clinics',lazy='dynamic')
-    patient = db.relationship('Patients',backref='clinics',lazy='dynamic')
+
 
     def __repr__(self):
         return f'Клиника {self.description}'
 
-class Robots(db.Model):
-    __tablename__ = 'Robots'
-    id = db.Column(db.Integer(), primary_key=True)
-    clinic_id = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
-    description = db.Column(db.String(100))
 
-    def __repr__(self):
-        return f'Робот {self.description}'
+    @staticmethod
+    def insert_clinics():
+        clinics=['Клинический центр Первого МГМУ им. И.М. Сеченова']
+
+        for c in clinics:
+            clinic = Clinics.query.filter_by(description=c).first()
+            if clinic is None:
+                clinic = Clinics(description=c)
+                db.session.add(clinic)
+        db.session.commit()
+
 
 class Patients(db.Model):
     __tablename__ = 'Patients'
     id = db.Column(db.Integer(), primary_key=True)
-    snils_hash =db.Column(db.String(128))
-    clinic_id = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
-    patient_snils = db.Column(db.String(11))
-    #fio = db.Column(db.String(100))
-    birthdate = db.Column(db.Date())
-    sex = db.Column(db.String(1))
-
-    def __repr__(self):
-        return f'Пациент {self.snils}'
-
-    def get_snils_hash(self, snils):
-        digest = md5(snils.lower().encode('utf-8')).hexdigest()
-        self.snils_hash = digest
+#     snils_hash =db.Column(db.String(128))
+#     clinic_id = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
+#     patient_snils = db.Column(db.String(11))
+#     #fio = db.Column(db.String(100))
+#     birthdate = db.Column(db.Date())
+#     sex = db.Column(db.String(1))
+#
+#     def __repr__(self):
+#         return f'Пациент {self.snils}'
+#
+#     def get_snils_hash(self, snils):
+#         digest = md5(snils.lower().encode('utf-8')).hexdigest()
+#         self.snils_hash = digest

@@ -7,19 +7,21 @@ from app import db
 from app.models import Patients, Users
 from werkzeug.urls import url_parse
 from hashlib import md5
+from ..decorators import permission_required
 
 
 @bp.route('/')
-@login_required
 def index():
     return render_template('index.html')
 
-@bp.before_request
-def before_request():
-    pass
+@bp.route('/testboot')
+def testboot():
+    return render_template('superbaseboot.html')
+
 
 @bp.route('/patient_data_enter', methods = ['GET','POST'])
 @login_required
+@permission_required('HIST_W')
 def patient_data_enter():
     #fio = None
     form = PatientForm()
@@ -38,10 +40,10 @@ def patient_data_enter():
             db.session.add(patient)
             db.session.commit()
             session['known'] = False
-            flash('Данные сохранены')
+            flash('Данные сохранены', category='info')
         else:
             session['known'] = True
-            flash('Пациент с указанным СНИЛС уже есть в базе')
+            flash('Пациент с указанным СНИЛС уже есть в базе', category='warning')
         return redirect(url_for('main.patient_data_enter'))
 
     return render_template('patient_data_enter.html', form = form, known = session.get('known',False))
