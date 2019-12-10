@@ -2,33 +2,58 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% import "_macros.html" as macros %}
 {% block page_content %}
-<div class="container-fluid">
-  <div class="header">
-     <h1>{{title}}</h1>
-     <div class="row">
-       {{ wtf.quick_form(form) }}
+
+<div class="card text-white bg-secondary w-80">
+  <div class="card-body">
+    <h3 class="card-title">Ведение полномочий</h3>
+    <div class="page-header">
+        <h3></h3>
+    </div>
+      <form class="form" action="" method="post">
+        {{form.csrf_token()}}
+        <div class="row">
+          <div class="col">
+            {{wtf.form_field(form.user)}}
+          </div>
+          <div class="col">
+            {{wtf.form_field(form.role)}}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            {{wtf.form_field(form.action)}}
+          </div>
+          <div class="col">
+            {{form.submit(class='btn btn-primary')}}
+          </div>
+        </div>
+      </form>
      </div>
-  <div class="row">
-    <table class="table">
-      <thead class="thead-dark">
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">User</th>
-          <th scope="col">Role</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for ur in userroles %}
-        <tr>
-              <td>{{ur.id}}</td>
-              <td>{{Users.query.get(ur.user).username}}</td>
-              <td>{{Roles.query.get(ur.role).description}}</td>
-            </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    </div>
+    <div class="card w-80 bg-light">
+     <div class="card-body">
+      <table class="table">
+        <thead class="thead-light">
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">User</th>
+            <th scope="col">Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ur in userroles %}
+          <tr>
+                <td>{{ur.id}}</td>
+                <td>{{Users.query.get(ur.user).username}}</td>
+                <td>{{Roles.query.get(ur.role).description}}</td>
+              </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  <div class="card-footer">
+    {{ macros.pagination_w(pagination, 'admin.user_role')}}
   </div>
-<div class="pagination">
-  {{ macros.pagination_widget(pagination, 'admin.user_role') }}
-</div>
+  </div>
+
 {% endblock %}

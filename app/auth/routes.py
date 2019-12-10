@@ -1,6 +1,6 @@
 from flask import render_template, redirect, url_for, flash, request
 from werkzeug.urls import url_parse
-from flask_login import login_user, logout_user, current_user
+from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
@@ -44,14 +44,20 @@ def login():
             next = request.args.get('next')
             if next is None or not next.startswith('/'):
                 next = url_for('main.index')
+                #next = url_for('auth.welcome')
             return redirect(next)
         flash('Invalid username or password.', category='warning')
     return render_template('auth/login.html', form=form, title='Sign In')
 
+@bp.route('/welome')
+@login_required
+def welcome():
+    return render_template('welcome.html')
+
 @bp.route('/logout')
 def logout():
     logout_user()
-    flash('You are logged out!', category='info')
+    #flash('You are logged out!', category='info')
     return redirect(url_for('main.index'))
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
