@@ -147,8 +147,8 @@ class Clinics(db.Model):
     __tablename__ = 'Clinics'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100))
-    users = db.relationship('Users',backref='clinic',lazy='dynamic')
-    research_groups = db.relationship('ResearchGroups',backref='clinic', lazy='dynamic')
+    users = db.relationship('Users',backref='clinic_of_users',lazy='dynamic')
+    research_groups = db.relationship('ResearchGroups',backref='clinic_of_re_groups', lazy='dynamic')
 
 
     def __repr__(self):
