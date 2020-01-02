@@ -13,7 +13,7 @@ from datetime import datetime
 def load_user(id):
     return Users.query.get(int(id))
 
-
+# Роли пользователей
 class UserRoles(db.Model):
     __tablename__= 'UserRoles'
     id = db.Column(db.Integer(), primary_key = True)
@@ -35,7 +35,7 @@ class UserRoles(db.Model):
             db.session.add(user_role)
         db.session.commit()
 
-
+# Пользователи
 class Users(db.Model, UserMixin):
     __tablename__ = 'Users'
     id = db.Column(db.Integer(), primary_key=True)
@@ -112,7 +112,7 @@ class Users(db.Model, UserMixin):
         db.session.add(self)
         db.session.commit()
 
-
+# Роли
 class Roles(db.Model):
     __tablename__ = 'Roles'
     id = db.Column(db.Integer(), primary_key=True)
@@ -142,11 +142,13 @@ class Roles(db.Model):
                 db.session.add(role)
         db.session.commit()
 
-
+# Клиники
 class Clinics(db.Model):
     __tablename__ = 'Clinics'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100))
+    users = db.relationship('Users',backref='clinic',lazy='dynamic')
+    research_groups = db.relationship('ResearchGroups',backref='clinic', lazy='dynamic')
 
 
     def __repr__(self):
@@ -163,6 +165,45 @@ class Clinics(db.Model):
                 clinic = Clinics(description=c)
                 db.session.add(clinic)
         db.session.commit()
+
+
+# Группы исследования
+class ResearchGroups(db.Model):
+    __tablename__ = 'ResearchGroups'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
+
+# Причины исключения из исследования
+class Reasons(db.Model):
+    __tablename__ = 'Reasons'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=True)
+
+# Диагнозы
+class DiagnosesItems(db.Model):
+    __tablename__ = 'DiagnosesItems'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=True)
+    mkb10 = db.Column(db.String(20), unique=False)
+    type = db.Column(db.String(30), unique=False)
+
+# Врачи
+class Doctors(db.Model):
+    __tablename__ = 'Doctors'
+    id = db.Column(db.Integer(), primary_key=True)
+    first_name = db.Column(db.String(100), unique=False)
+    second_name = db.Column(db.String(100), unique=False)
+    fio = db.Column(db.String(100), unique=False)
+
+# Протезы
+class Prosthesis(db.Model):
+    __tablename__ = 'Prosthesis'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    firm = db.Column(db.String(100), unique=False)
+    type = db.Column(db.String(100), unique=False)
+
 
 
 class Patients(db.Model):

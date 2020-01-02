@@ -1,9 +1,12 @@
 import os
+import secrets
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'my_secret_key_@!@%@^%!^12212')
+    #SECRET_KEY = open('/path/to/secret/file').read()
+    SECRET_KEY = SECRET_KEY = os.environ.get('SECRET_KEY', secrets.token_urlsafe(16))
+    #os.environ.get('SECRET_KEY', 'my_secret_key_@!@%@^%!^12212')
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
     MAIL_PORT = os.environ.get('MAIL_PORT', '587')
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true')

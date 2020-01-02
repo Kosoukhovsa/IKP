@@ -14,6 +14,9 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 
 def create_app(config_name):
+    # Создание приложения с указанием папки для статичных файлов
+    #app = Flask(__name__, static_folder='/static/images')
+    # По умолчанию - статичные файлы находятся в папке static
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)

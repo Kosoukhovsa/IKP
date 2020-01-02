@@ -49,7 +49,7 @@ def login():
         flash('Invalid username or password.', category='warning')
     return render_template('auth/login.html', form=form, title='Sign In')
 
-@bp.route('/welome')
+@bp.route('/welcome')
 @login_required
 def welcome():
     return render_template('welcome.html')
