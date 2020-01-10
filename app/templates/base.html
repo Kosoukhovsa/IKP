@@ -23,8 +23,8 @@
         <li class="nav-item dropdown">
           <a class="nav-link text-light text-uppercase font-weight-bold px-3 dropdown-toggle" data-toggle="dropdown" href="#">Справочники</a>
           <div class="dropdown-menu">
-            <a class="dropdown-item" href="#">Клиники</a>
-            <a class="dropdown-item" href="#">Группы исследования</a>
+            <a class="dropdown-item" href="{{url_for('admin.list_clinics')}}">Клиники</a>
+            <a class="dropdown-item" href="{{url_for('admin.research_groups_edit')}}">Группы исследования</a>
             <a class="dropdown-item" href="#">Причины исключения из исследования</a>
             <a class="dropdown-item" href="#">Диагнозы</a>
             <a class="dropdown-item" href="#">Врачи клиники</a>

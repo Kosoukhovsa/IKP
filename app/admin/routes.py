@@ -3,24 +3,102 @@ from werkzeug.urls import url_parse
 from flask_login import login_user, logout_user, current_user
 from app import db
 from app.admin import bp
-from app.admin.forms import UserRole, UserRoleFilter
-from app.models import Users, Clinics, UserRoles, Roles
+from app.admin.forms import UserRoleForm, UserRoleFilterForm, ClinicsForm, ResearchGroupForm, ResearchGroupFilterForm
+from app.models import Users, Clinics, UserRoles, Roles, ResearchGroups
 from datetime import datetime
+from sqlalchemy.orm.util import join
 
+# Справочник Клиник
+@bp.route('/admin/lists/clinics', methods= ['GET','POST'])
+def list_clinics():
+    Form = ClinicsForm()
+    page = request.args.get('page',1,type=int)
+    pagination = Clinics.query.paginate(page,5,error_out=False)
+    clinic_list = pagination.items
+    if Form.submit_ok.data and Form.validate_on_submit():
+        if Form.action.data==1:
+            clinic = Clinics(description=Form.clinic.data)
+            db.session.add(clinic)
+            db.session.commit()
+            flash('Клиника добавлена', category='info')
+        if Form.action.data==2:
+            #clinic = Clinics.query.filter_by(description=Form.clinic.data).first()
+            #if clinic:
+            #    db.session.delete(clinic)
+            #    db.session.commit()
+            #    flash('Клиника удалена', category='info')
+            flash('Удаление клиник запрещено!', category='error')
+        return redirect(url_for('.list_clinics'))
+    return render_template('admin/clinics.html',pagination=pagination, title = 'Ведение списка клиник', Form=Form, clinic_list = clinic_list)
+
+# Справочник Групп исследования
+@bp.route('/research_groups_edit', methods = ['GET','POST'])
+def research_groups_edit():
+    GroupForm = ResearchGroupForm()
+    GroupFilterForm = ResearchGroupFilterForm()
+    page = request.args.get('page',1,type=int)
+
+    clinic_filter_id = session.get('clinic_filter_id')
+    group_list = ResearchGroups.query
+    if clinic_filter_id is not None:
+        group_list = group_list.filter(ResearchGroups.clinic==clinic_filter_id)
+
+    pagination =  group_list.paginate(page,5,error_out=False)
+    groups = pagination.items
+
+    if GroupForm.submit_ok.data and GroupForm.validate_on_submit():
+# Обработка удаления и добавления данных
+
+        group = ResearchGroups.query.filter(ResearchGroups.description==GroupForm.description.data,
+                                            ResearchGroups.clinic==GroupForm.clinic.data).first()
+        if group is not None:
+            flash('Данная группа уже существует', category='warning')
+        elif group is None:
+            new_group = ResearchGroups(clinic=GroupForm.clinic.data, description=GroupForm.description.data)
+            db.session.add(new_group)
+            db.session.commit()
+            flash('Группа создана', category='info')
+
+        return redirect(url_for('.research_groups_edit'))
+    if GroupFilterForm.submit_filter.data and UserFilterForm.validate_on_submit():
+# Фильтрация списка
+        group_list = ResearchGroups.query
+        if GroupFilterForm.clinic.data != 0:
+# Выбрано значение ( не All)
+            group_list = group_list.filter(ResearchGroups.clinic==GroupFilterForm.clinic.data)
+            session['clinic_filter_id']= GroupFilterForm.clinic.data
+
+# Выбрано значение ALL - снять фильтр
+        if GroupFilterForm.clinic.data == 0:
+            session['clinic_filter_id'] = None
+
+        pagination =  group_list.paginate(page,5,error_out=False)
+        groups = pagination.items
+
+
+    return render_template('admin/research_groups.html', GroupForm=GroupForm, GroupFilterForm=GroupFilterForm, groups=groups,
+                            title='Группы исследования', ResearchGroups=ResearchGroups, pagination=pagination)
+
+
+# Справочник ролей
 @bp.route('/user_role_edit', methods = ['GET','POST'])
 def user_role():
-    UserForm = UserRole()
-    UserFilterForm = UserRoleFilter()
+    UserForm = UserRoleForm()
+    UserFilterForm = UserRoleFilterForm()
     page = request.args.get('page',1,type=int)
 
     user_filter_id = session.get('user_filter_id')
+    role_filter_id = session.get('role_filter_id')
+    user_list = UserRoles.query
     if user_filter_id is not None:
-        pagination =  UserRoles.query.filter_by(user=user_filter_id).paginate(page,5,error_out=False)
-    else:
-        pagination =  UserRoles.query.paginate(page,5,error_out=False)
+        user_list = user_list.filter(UserRoles.user==user_filter_id)
+    if role_filter_id is not None:
+        user_list = user_list.filter(UserRoles.role==role_filter_id)
+    pagination =  user_list.paginate(page,5,error_out=False)
     userroles = pagination.items
 
     if UserForm.submit_ok.data and UserForm.validate_on_submit():
+# Обработка удаления и добавления данных
         user = Users.query.get(UserForm.user.data)
         role = Roles.query.get(UserForm.role.data)
         user_role = UserRoles.query.filter_by(user=user.id, role=role.id).first()
@@ -37,11 +115,25 @@ def user_role():
             db.session.delete(user_role)
             db.session.commit()
             flash('Полномочия удалены', category='warning')
+        return redirect(url_for('.user_role'))
     if UserFilterForm.submit_filter.data and UserFilterForm.validate_on_submit():
-        user_filter = Users.query.get(UserFilterForm.user_filter.data)
-        pagination =  UserRoles.query.filter_by(user=user_filter.id).paginate(page,5,error_out=False)
+# Фильтрация списка
+        user_list = UserRoles.query
+        if UserFilterForm.user_filter.data != 0:
+# Выбрано значение ( не All)
+            user_list = user_list.filter(UserRoles.user==UserFilterForm.user_filter.data)
+            session['user_filter_id']= UserFilterForm.user_filter.data
+        if UserFilterForm.role_filter.data != 0:
+            user_list = user_list.filter(UserRoles.role==UserFilterForm.role_filter.data)
+            session['role_filter_id']= UserFilterForm.role_filter.data
+# Выбрано значение ALL - снять фильтр
+        if UserFilterForm.user_filter.data == 0:
+            session['user_filter_id'] = None
+        if UserFilterForm.role_filter.data == 0:
+            session['role_filter_id'] = None
+        pagination =  user_list.paginate(page,5,error_out=False)
         userroles = pagination.items
-        session['user_filter_id']=user_filter.id
+
 
     return render_template('admin/user_role.html', Panel='UserRoles', UserForm=UserForm, UserFilterForm=UserFilterForm, userroles=userroles,
                             title='Назначение полномочий', Users=Users, Roles=Roles,

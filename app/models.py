@@ -150,7 +150,6 @@ class Clinics(db.Model):
     users = db.relationship('Users',backref='clinic_of_users',lazy='dynamic')
     research_groups = db.relationship('ResearchGroups',backref='clinic_of_re_groups', lazy='dynamic')
 
-
     def __repr__(self):
         return f'Клиника {self.description}'
 
@@ -158,7 +157,6 @@ class Clinics(db.Model):
     @staticmethod
     def insert_clinics():
         clinics=['Клинический центр Первого МГМУ им. И.М. Сеченова']
-
         for c in clinics:
             clinic = Clinics.query.filter_by(description=c).first()
             if clinic is None:
@@ -174,6 +172,18 @@ class ResearchGroups(db.Model):
     description = db.Column(db.String(100), unique=True)
     clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
 
+    @staticmethod
+    def insert_rgroups(dict_rgroups):
+    # Заполнение справочника групп из словаря
+        for i in dict_rgroups:
+            r_group = ResearchGroups.query.filter(description==i['description'], clinic==i['clinic']).first()
+            if r_group is None:
+                r_group = ResearchGroups(description=i['description'],
+                                         clinic=i['clinic'])
+        db.session.commit()
+
+
+
 # Причины исключения из исследования
 class Reasons(db.Model):
     __tablename__ = 'Reasons'
@@ -186,7 +196,7 @@ class DiagnosesItems(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=True)
     mkb10 = db.Column(db.String(20), unique=False)
-    type = db.Column(db.String(30), unique=False)
+    type = db.Column(db.String(30), unique=False, index = True)
 
 # Врачи
 class Doctors(db.Model):
@@ -204,21 +214,88 @@ class Prosthesis(db.Model):
     firm = db.Column(db.String(100), unique=False)
     type = db.Column(db.String(100), unique=False)
 
+# Осложнения
+class Сomplications(db.Model):
+    __tablename__ = 'Сomplications'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    type = db.Column(db.String(100), unique=False, index = True)
+
+# Виды операций
+class OperationTypes(db.Model):
+    __tablename__ = 'OperationTypes'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+
+# Этапы операций
+class OperationSteps(db.Model):
+    __tablename__ = 'OperationSteps'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    order = db.Column(db.Integer(), unique=True)
+
+# Наблюдения
+class Events(db.Model):
+    __tablename__ = 'Events'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    type = db.Column(db.String(100), unique=False, index = True)
+
+# Список обследований
+class Checkups(db.Model):
+    __tablename__ = 'Checkups'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    is_mandatory = db.Column(db.Boolean(), unique=False, index = True)
+
+# Группы Показателей
+class IndicatorsGroups(db.Model):
+    __tablename__ = 'IndicatorsGroups'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    indicators = db.relationship('Indicators', backref='groups', lazy='dynamic')
+
+# Показатели
+class Indicators(db.Model):
+    __tablename__ = 'Indicators'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    group = db.Column(db.Integer(), db.ForeignKey('IndicatorsGroups.id'))
+    unit = db.Column(db.String(20), unique=False)
+    def_values = db.relationship('IndicatorsDefs', backref='def_indicators')
+    norm_values = db.relationship('IndicatorsNorms', backref='norm_indicators')
 
 
+# Допустимые значения показателей
+class IndicatorsDefs(db.Model):
+    __tablename__='IndicatorsDefs'
+    id=db.Column(db.Integer(), primary_key=True)
+    indicator = db.Column(db.Integer(), db.ForeignKey('Indicators.id'), index = True)
+    text_value = db.Column(db.String(100), unique=False)
+    num_value = db.Column(db.Numeric())
+
+# Нормативные значения показателей
+class IndicatorsNorms(db.Model):
+    __tablename__='IndicatorsNorms'
+    id=db.Column(db.Integer(), primary_key=True)
+    indicator = db.Column(db.Integer(), db.ForeignKey('Indicators.id'), index = True)
+    nvalue_from = db.Column(db.Numeric())
+    nvalue_to = db.Column(db.Numeric())
+
+# Пациенты
 class Patients(db.Model):
     __tablename__ = 'Patients'
     id = db.Column(db.Integer(), primary_key=True)
-#     snils_hash =db.Column(db.String(128))
+    snils_hash =db.Column(db.String(128), unique=False)
 #     clinic_id = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
 #     patient_snils = db.Column(db.String(11))
 #     #fio = db.Column(db.String(100))
-#     birthdate = db.Column(db.Date())
-#     sex = db.Column(db.String(1))
-#
-#     def __repr__(self):
-#         return f'Пациент {self.snils}'
-#
-#     def get_snils_hash(self, snils):
-#         digest = md5(snils.lower().encode('utf-8')).hexdigest()
-#         self.snils_hash = digest
+    birthdate = db.Column(db.Date())
+    sex = db.Column(db.String(1), index=True)
+
+    def __repr__(self):
+        return f'Пациент {self.snils}'
+
+    def get_snils_hash(self, snils):
+        digest = md5(snils.lower().encode('utf-8')).hexdigest()
+        self.snils_hash = digest
