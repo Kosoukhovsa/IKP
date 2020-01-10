@@ -169,7 +169,7 @@ class Clinics(db.Model):
 class ResearchGroups(db.Model):
     __tablename__ = 'ResearchGroups'
     id = db.Column(db.Integer(), primary_key=True)
-    description = db.Column(db.String(100), unique=True)
+    description = db.Column(db.String(100), unique=False)
     clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
 
     @staticmethod
