@@ -166,7 +166,10 @@ class Clinics(db.Model):
 
 
 # Группы исследования
+
 class ResearchGroups(db.Model):
+    pass
+
     __tablename__ = 'ResearchGroups'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=False)
