@@ -42,3 +42,4 @@ wincertstore==0.2
 WTForms==2.2.1
 WTForms-Alchemy==0.16.9
 WTForms-Components==0.10.4
+xlrd==1.2.0
