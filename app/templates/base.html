@@ -19,16 +19,11 @@
       <ul class="navbar-nav">
         {% if current_user.is_authenticated %}
           {% if current_user.is_admin() %}
-          <a class="nav-link text-light text-uppercase font-weight-bold px-3" href="{{url_for('admin.user_role')}}">Администрирование</a>
         <li class="nav-item dropdown">
-          <a class="nav-link text-light text-uppercase font-weight-bold px-3 dropdown-toggle" data-toggle="dropdown" href="#">Справочники</a>
+          <a class="nav-link text-light text-uppercase font-weight-bold px-3 dropdown-toggle" data-toggle="dropdown" href="#">Администрирование</a>
           <div class="dropdown-menu">
-            <a class="dropdown-item" href="{{url_for('admin.list_clinics')}}">Клиники</a>
-            <a class="dropdown-item" href="{{url_for('admin.research_groups_edit')}}">Группы исследования</a>
-            <a class="dropdown-item" href="#">Причины исключения из исследования</a>
-            <a class="dropdown-item" href="#">Диагнозы</a>
-            <a class="dropdown-item" href="#">Врачи клиники</a>
-            <a class="dropdown-item" href="#">Протезы</a>
+            <a class="dropdown-item" href="{{url_for('admin.user_role')}}">Ведение полномочий</a>
+            <a class="dropdown-item" href="{{url_for('admin.dict_list')}}">Ведение справочников</a>            
           </div>
         </li>
           {% endif %}

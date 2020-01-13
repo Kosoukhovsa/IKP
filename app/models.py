@@ -22,8 +22,9 @@ class UserRoles(db.Model):
     time_created = db.Column(db.DateTime(), default=datetime.utcnow())
 
     @staticmethod
-    def insert_user_roles():
-        user_roles = {"admin":"ADMIN",
+    def insert_user_roles(user_roles):
+        if user_roles is None:
+            user_roles = {"admin":"ADMIN",
                 "doctor":"HIST_W",
                 "researcher":"DATA_R",
                 "researcher":"DATA_D"}
@@ -155,34 +156,36 @@ class Clinics(db.Model):
 
 
     @staticmethod
-    def insert_clinics():
-        clinics=['Клинический центр Первого МГМУ им. И.М. Сеченова']
-        for c in clinics:
-            clinic = Clinics.query.filter_by(description=c).first()
-            if clinic is None:
-                clinic = Clinics(description=c)
-                db.session.add(clinic)
+    def insert_clinics(dict_clinics):
+
+        # Заполнение справочника групп из словаря
+        # Сначала удаление значений справочника
+        Clinics.query.delete()
+        for i in dict_clinics:
+            new_c = Clinics(id=i['id'],
+                             description=i['description'])
+            db.session.add(new_c)
         db.session.commit()
 
 
 # Группы исследования
 
 class ResearchGroups(db.Model):
-    pass
-
     __tablename__ = 'ResearchGroups'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=False)
     clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
 
     @staticmethod
-    def insert_rgroups(dict_rgroups):
+    def insert_ResearchGroups(dict_rgroups):
     # Заполнение справочника групп из словаря
+    # Сначала удаление значений справочника
+        ResearchGroups.query.delete()
         for i in dict_rgroups:
-            r_group = ResearchGroups.query.filter(description==i['description'], clinic==i['clinic']).first()
-            if r_group is None:
-                r_group = ResearchGroups(description=i['description'],
-                                         clinic=i['clinic'])
+            new_group = ResearchGroups(id=i['id'],
+                                        description=i['description'],
+                                        clinic=i['clinic'])
+            db.session.add(new_group)
         db.session.commit()
 
 
@@ -218,8 +221,8 @@ class Prosthesis(db.Model):
     type = db.Column(db.String(100), unique=False)
 
 # Осложнения
-class Сomplications(db.Model):
-    __tablename__ = 'Сomplications'
+class Complications(db.Model):
+    __tablename__ = 'Complications'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=False)
     type = db.Column(db.String(100), unique=False, index = True)
@@ -302,3 +305,81 @@ class Patients(db.Model):
     def get_snils_hash(self, snils):
         digest = md5(snils.lower().encode('utf-8')).hexdigest()
         self.snils_hash = digest
+
+class LoadDictionary():
+
+    def __init__(self, dict_list):
+        self.dict_list = dict_list
+
+    # Метод позволяет выбрать нужный справочник и загрузить его
+    def switch_load(self,dict_name):
+        default = "Метод загрузки отсутствует"
+        return getattr(self, 'load_'+str(dict_name), lambda: default)()
+
+    def load_Clinics(self):
+        # Заполнение справочника групп из словаря
+        # Сначала удаление значений справочника
+        Clinics.query.delete()
+        for i in self.dict_list:
+            new_c = Clinics(id=i['id'],
+                             description=i['description'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_Reasons(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Reasons.query.delete()
+        for i in self.dict_list:
+            new_c = Reasons(id=i['id'],
+                             description=i['description'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_DiagnosesItems(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        DiagnosesItems.query.delete()
+        for i in self.dict_list:
+            new_c = DiagnosesItems(id=i['id'],
+                             description=i['description'],
+                             mkb10=i['mkb10'],
+                             type=i['type'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_Roles(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Roles.query.delete()
+        for i in self.dict_list:
+            new_c = Roles(id=i['id'],
+                             description=i['description'],
+                             permissions=i['permissions'],
+                             is_admin=i['is_admin'])
+            db.session.add(new_c)
+        db.session.commit()
+
+
+    def load_Prosthesis(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Prosthesis.query.delete()
+        for i in self.dict_list:
+            new_c = Prosthesis(id=i['id'],
+                             description=i['description'],
+                             firm=i['firm'],
+                             type=i['type'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_Complications(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Complications.query.delete()
+        for i in self.dict_list:
+            new_c = Complications(id=i['id'],
+                             description=i['description'],
+                             type=i['type'])
+            db.session.add(new_c)
+        db.session.commit()

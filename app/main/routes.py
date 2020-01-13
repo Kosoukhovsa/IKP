@@ -9,7 +9,6 @@ from werkzeug.urls import url_parse
 from hashlib import md5
 from ..decorators import permission_required
 
-
 @bp.route('/')
 def index():
     return render_template('index.html')

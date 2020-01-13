@@ -4,9 +4,74 @@ from flask_login import login_user, logout_user, current_user
 from app import db
 from app.admin import bp
 from app.admin.forms import UserRoleForm, UserRoleFilterForm, ClinicsForm, ResearchGroupForm, ResearchGroupFilterForm
-from app.models import Users, Clinics, UserRoles, Roles, ResearchGroups
+from app.models import Users, Clinics, UserRoles, Roles, ResearchGroups, LoadDictionary
 from datetime import datetime
 from sqlalchemy.orm.util import join
+from Tools.sqltools import SqlEngine
+from Tools.filetools import FileEngine
+import pandas
+
+# Список справочников
+@bp.route('/admin/dict_list')
+def dict_list():
+    # Получить список таблиц с количеством записей
+    # { table: rows }
+    tables_dict = SqlEngine.GetTablesInfo(db)
+    # Получить спсисок настраиваемых справочников и ограничить выводимый список только ими
+    dict_list = FileEngine.GetDictList()
+
+    only_dict = {}
+    for (k,v) in tables_dict.items():
+        if k in dict_list:
+            only_dict[k]=v
+
+    return render_template('admin/dict_dashboard.html', tables_dict=only_dict)
+
+# Загрузка отделных справочников
+@bp.route('/admin/dict_load/<t>', methods= ['GET','POST'])
+def dict_load(t):
+    # Загрузить данные из файла
+    dict = FileEngine.GetListData(t)
+    if dict != {}:
+        ld = LoadDictionary(dict)
+        ld.switch_load(t)
+
+    return redirect(url_for('.dict_list'))
+
+# Загрузка всех справочников
+@bp.route('/admin/dict_load_all/', methods= ['GET','POST'])
+def dict_load_all():
+    # Загрузить список справочников  из файла
+    # Получить спсисок настраиваемых справочников
+    dict_list = FileEngine.GetDictList()
+    for t in dict_list:
+        dict = FileEngine.GetListData(t)
+        if dict != {}:
+            ld = LoadDictionary(dict)
+            ld.switch_load(t)
+
+    return redirect(url_for('.dict_list'))
+
+# Функция-переключатьель ведения  справочников
+@bp.route('/admin/dict_edit_switch/<t>', methods= ['GET','POST'])
+def dict_edit_switch(t):
+
+    def edit_Clinics():
+        return redirect(url_for('.list_clinics'))
+
+    def edit_ResearchGroups():
+        return redirect(url_for('.research_groups_edit'))
+
+    def default():
+        return redirect(url_for('.dict_list'))
+
+    dict_switch = {
+    'Clinics':edit_Clinics,
+    'ResearchGroups':edit_ResearchGroups
+    }
+
+    return dict_switch.get(t,default)()
+
 
 # Справочник Клиник
 @bp.route('/admin/lists/clinics', methods= ['GET','POST'])
@@ -80,7 +145,7 @@ def research_groups_edit():
                             title='Группы исследования', ResearchGroups=ResearchGroups, pagination=pagination)
 
 
-# Справочник ролей
+# Ведение полномочий
 @bp.route('/user_role_edit', methods = ['GET','POST'])
 def user_role():
     UserForm = UserRoleForm()
