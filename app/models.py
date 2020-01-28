@@ -227,11 +227,14 @@ class Complications(db.Model):
     description = db.Column(db.String(100), unique=False)
     type = db.Column(db.String(100), unique=False, index = True)
 
+"""
+# Справочник исключен
 # Виды операций
 class OperationTypes(db.Model):
     __tablename__ = 'OperationTypes'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=False)
+"""
 
 # Этапы операций
 class OperationSteps(db.Model):
@@ -247,12 +250,16 @@ class Events(db.Model):
     description = db.Column(db.String(100), unique=False)
     type = db.Column(db.String(100), unique=False, index = True)
 
+"""
+# Справочник исключен
 # Список обследований
 class Checkups(db.Model):
     __tablename__ = 'Checkups'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=False)
     is_mandatory = db.Column(db.Boolean(), unique=False, index = True)
+"""
+
 
 # Группы Показателей
 class IndicatorsGroups(db.Model):
@@ -266,10 +273,15 @@ class Indicators(db.Model):
     __tablename__ = 'Indicators'
     id = db.Column(db.Integer(), primary_key=True)
     description = db.Column(db.String(100), unique=False)
-    group = db.Column(db.Integer(), db.ForeignKey('IndicatorsGroups.id'))
+    is_calculated = db.Column(db.Boolean)
+    group = db.Column(db.Integer(), db.ForeignKey('IndicatorsGroups.id'), index = True)
     unit = db.Column(db.String(20), unique=False)
     def_values = db.relationship('IndicatorsDefs', backref='def_indicators')
     norm_values = db.relationship('IndicatorsNorms', backref='norm_indicators')
+
+    #def __init__(self):
+        # Здесь нужно прописать формулы для расчета показателей
+    #    pass
 
 
 # Допустимые значения показателей
@@ -279,6 +291,7 @@ class IndicatorsDefs(db.Model):
     indicator = db.Column(db.Integer(), db.ForeignKey('Indicators.id'), index = True)
     text_value = db.Column(db.String(100), unique=False)
     num_value = db.Column(db.Numeric())
+    id_value =db.Column(db.Integer(), unique=False)
 
 # Нормативные значения показателей
 class IndicatorsNorms(db.Model):
@@ -306,6 +319,144 @@ class Patients(db.Model):
         digest = md5(snils.lower().encode('utf-8')).hexdigest()
         self.snils_hash = digest
 
+# Анкеты
+class Profiles(db.Model):
+    __tablename__ = 'Profiles'
+    id = db.Column(db.Integer(), primary_key=True)
+    description = db.Column(db.String(100), unique=False)
+    items = db.relationship('ProfileItems', backref='profiles', lazy='dynamic')
+
+# Вопросы анкет
+class ProfileItems(db.Model):
+    __tablename__ = 'ProfileItems'
+    id = db.Column(db.Integer(), primary_key=True)
+    profile= db.Column(db.Integer(), db.ForeignKey('Profiles.id'), index = True)
+    description = db.Column(db.String(100), unique=False)
+    answers = db.relationship('ProfilesAnswers', backref='items', lazy='dynamic')
+    item_group = db.Column(db.String(100))
+
+# Возможные Ответы на вопросы анкет
+class ProfilesAnswers(db.Model):
+    __tablename__ = 'ProfilesAnswers'
+    id = db.Column(db.Integer(), primary_key=True)
+    profile= db.Column(db.Integer(), db.ForeignKey('Profiles.id'), index = True)
+    profile_item= db.Column(db.Integer(), db.ForeignKey('ProfileItems.id'))
+    response = db.Column(db.String(100), unique=False)
+    response_value = db.Column(db.Numeric())
+
+# Транзакционные таблицы
+# Истории болезни
+class Histories(db.Model):
+    __tablename__='Histories'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    hist_number = db.Column(db.String(100), unique=False)
+    time_created = db.Column(db.DateTime(), default=datetime.utcnow())
+    date_in = db.Column(db.Date())
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    research_group = db.Column(db.Integer(), db.ForeignKey('ResearchGroups.id'), index = True)
+    time_research_in = db.Column(db.DateTime())
+    time_research_out = db.Column(db.DateTime())
+    reason = db.Column(db.Integer(), db.ForeignKey('Reasons.id'))
+
+# Диагнозы пациентов
+class HistoryEvents(db.Model):
+    __tablename__='HistoryEvents'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'))
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'))
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    event = db.Column(db.Integer(), db.ForeignKey('Events.id'), index = True)
+    date_begin = db.Column(db.Date())
+    date_end = db.Column(db.Date())
+    doctor = db.Column(db.Integer(), db.ForeignKey('Doctors.id'), index = True)
+    doctor_researcher = db.Column(db.Integer(), db.ForeignKey('Doctors.id'), index = True)
+    doctor_chief = db.Column(db.Integer(), db.ForeignKey('Doctors.id'), index = True)
+    days1 = db.Column(db.Integer()) #койко-день
+    days2 = db.Column(db.Integer()) #предоперационный койко-день
+    days3 = db.Column(db.Integer()) #послеоперационный койко-день
+
+# Диагнозы
+class Diagnoses(db.Model):
+    __tablename__='Diagnoses'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'), index = True)
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    diagnose = db.Column(db.Integer(), db.ForeignKey('Diagnoses.id'))
+    side_damage = db.Column(db.String(100))
+    date_created = db.Column(db.Date())
+    prothes = db.Column(db.Integer(), db.ForeignKey('Prosthesis.id'))
+
+# Фактические значения показателей пациентов
+class IndicatorValues(db.Model):
+    __tablename__='IndicatorValues'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'), index = True)
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    history_event = db.Column(db.Integer(), db.ForeignKey('HistoryEvents.id'))
+    indicator = db.Column(db.Integer(), db.ForeignKey('Indicators.id'))
+    slice = db.Column(db.String(100))
+    time_created = db.Column(db.DateTime(), default=datetime.utcnow())
+    text_value = db.Column(db.String(100))
+    num_value = db.Column(db.Numeric())
+    num_deviation = db.Column(db.Numeric())
+    comment = db.Column(db.String(500))
+
+# Операции
+class Operations(db.Model):
+    __tablename__='Operations'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'))
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    doctor_surgeon = db.Column(db.Integer(), db.ForeignKey('Doctors.id'))
+    doctor_assistant = db.Column(db.Integer(), db.ForeignKey('Doctors.id'))
+    operation_order = db.Column(db.Integer())
+    time_begin = db.Column(db.DateTime())
+    time_end = db.Column(db.DateTime())
+    duration_min = db.Column(db.Integer()) # Длительность в минутах
+
+# Журнал операции
+class OperationLog(db.Model):
+    __tablename__='OperationLog'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'))
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    operation = db.Column(db.Integer(), db.ForeignKey('Operations.id'))
+    operation_step = db.Column(db.Integer(), db.ForeignKey('OperationSteps.id'))
+    time_begin = db.Column(db.DateTime())
+    time_end = db.Column(db.DateTime())
+    duration_min = db.Column(db.Integer()) # Длительность в минутах
+
+# Осложнения операции
+class OperationComp(db.Model):
+    __tablename__='OperationComp'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'))
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    operation = db.Column(db.Integer(), db.ForeignKey('Operations.id'))
+    complication = db.Column(db.Integer(), db.ForeignKey('Complications.id'))
+    date_begin = db.Column(db.Date())
+
+
+# Осложнения операции
+class ProfileResponses(db.Model):
+    __tablename__='ProfileResponses'
+    id = db.Column(db.Integer(), primary_key=True)
+    clinic = db.Column(db.Integer(), db.ForeignKey('Clinics.id'), index = True)
+    history = db.Column(db.Integer(), db.ForeignKey('Histories.id'))
+    patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
+    history_event = db.Column(db.Integer(), db.ForeignKey('HistoryEvents.id'))
+    profile = db.Column(db.Integer(), db.ForeignKey('Profiles.id'), index = True)
+    profile_item= db.Column(db.Integer(), db.ForeignKey('ProfileItems.id'))
+    response = db.Column(db.String(100), unique=False)
+    response_value = db.Column(db.Numeric())
+
+
 class LoadDictionary():
 
     def __init__(self, dict_list):
@@ -315,6 +466,9 @@ class LoadDictionary():
     def switch_load(self,dict_name):
         default = "Метод загрузки отсутствует"
         return getattr(self, 'load_'+str(dict_name), lambda: default)()
+
+    def default(self):
+        return ''
 
     def load_Clinics(self):
         # Заполнение справочника групп из словаря
@@ -381,5 +535,176 @@ class LoadDictionary():
             new_c = Complications(id=i['id'],
                              description=i['description'],
                              type=i['type'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_ResearchGroups(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        ResearchGroups.query.delete()
+        for i in self.dict_list:
+            new_c = ResearchGroups(id=i['id'],
+                             description=i['description'],
+                             clinic=i['clinic'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_Users(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        ResearchGroups.query.delete()
+        for i in self.dict_list:
+            new_c = ResearchGroups(id=i['id'],
+                             description=i['description'],
+                             clinic=i['clinic'])
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_Doctors(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Doctors.query.delete()
+        for i in self.dict_list:
+            new_c = Doctors(id=i['id'],
+                            first_name=i['first_name'],
+                            second_name=i['second_name'],
+                            fio=i['fio']
+                            )
+            db.session.add(new_c)
+        db.session.commit()
+
+
+    def load_Indicators(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Indicators.query.delete()
+        for i in self.dict_list:
+            new_c = Indicators(id=i['id'],
+                               description=i['description'],
+                               is_calculated=i['is_calculated'],
+                               group=i['group'],
+                               unit=i['unit']
+                               )
+            db.session.add(new_c)
+        db.session.commit()
+
+
+    def load_IndicatorsDefs(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        IndicatorsDefs.query.delete()
+        for i in self.dict_list:
+            new_c = IndicatorsDefs(id=i['id'],
+                                   indicator=i['indicator'],
+                                   text_value=i['text_value'],
+                                   num_value=i['num_value'],
+                                   id_value=i['id_value']
+                                   )
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_IndicatorsGroups(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        IndicatorsGroups.query.delete()
+        for i in self.dict_list:
+            new_c = IndicatorsGroups(id=i['id'],
+                                   description=i['description']
+                                   )
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_IndicatorsNorms(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        IndicatorsNorms.query.delete()
+        for i in self.dict_list:
+            new_c = IndicatorsNorms(id=i['id'],
+                                   indicator=i['indicator'],
+                                   nvalue_from=i['nvalue_from'],
+                                   nvalue_to=i['nvalue_to']
+                                   )
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_Events(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Events.query.delete()
+        for i in self.dict_list:
+            new_c = Events(
+                           id=i['id'],
+                           description=i['description'],
+                           type=i['type']
+                           )
+            db.session.add(new_c)
+        db.session.commit()
+
+
+    def load_OperationSteps(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        OperationSteps.query.delete()
+        for i in self.dict_list:
+            new_c = OperationSteps(
+                           id=i['id'],
+                           description=i['description'],
+                           order=i['order']
+                           )
+            db.session.add(new_c)
+        db.session.commit()
+
+    """
+    # Справочник исключен
+    def load_Checkups(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Checkups.query.delete()
+        for i in self.dict_list:
+            new_c = Checkups(
+                           id=i['id'],
+                           description=i['description'],
+                           is_mandatory=i['is_mandatory']
+                           )
+            db.session.add(new_c)
+        db.session.commit()
+    """
+    def load_Profiles(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        Profiles.query.delete()
+        for i in self.dict_list:
+            new_c = Profiles(
+                           id=i['id'],
+                           description=i['description']
+                           )
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_ProfileItems(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        ProfileItems.query.delete()
+        for i in self.dict_list:
+            new_c = ProfileItems(
+                           id=i['id'],
+                           profile=i['profile'],
+                           description=i['description'],
+                           item_group=i['item_group']
+                           )
+            db.session.add(new_c)
+        db.session.commit()
+
+    def load_ProfilesAnswers(self):
+        # Заполнение справочника из словаря
+        # Сначала удаление значений справочника
+        ProfilesAnswers.query.delete()
+        for i in self.dict_list:
+            new_c = ProfilesAnswers(
+                           id=i['id'],
+                           profile = i['profile'],
+                           profile_item=i['profile_item'],
+                           response=i['response']
+                           )
             db.session.add(new_c)
         db.session.commit()

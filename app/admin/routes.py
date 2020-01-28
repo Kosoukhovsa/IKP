@@ -125,16 +125,16 @@ def research_groups_edit():
             flash('Группа создана', category='info')
 
         return redirect(url_for('.research_groups_edit'))
-    if GroupFilterForm.submit_filter.data and UserFilterForm.validate_on_submit():
+    if GroupFilterForm.submit_filter.data and GroupFilterForm.validate_on_submit():
 # Фильтрация списка
         group_list = ResearchGroups.query
-        if GroupFilterForm.clinic.data != 0:
+        if GroupFilterForm.clinic_filter.data != 0:
 # Выбрано значение ( не All)
-            group_list = group_list.filter(ResearchGroups.clinic==GroupFilterForm.clinic.data)
-            session['clinic_filter_id']= GroupFilterForm.clinic.data
+            group_list = group_list.filter(ResearchGroups.clinic==GroupFilterForm.clinic_filter.data)
+            session['clinic_filter_id']= GroupFilterForm.clinic_filter.data
 
 # Выбрано значение ALL - снять фильтр
-        if GroupFilterForm.clinic.data == 0:
+        if GroupFilterForm.clinic_filter.data == 0:
             session['clinic_filter_id'] = None
 
         pagination =  group_list.paginate(page,5,error_out=False)
