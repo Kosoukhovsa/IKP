@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "_macros.html" as m %}
+{% import "history/_HistoryMainForm.html" as f_1 %}
+{% block page_content %}
+<div class="card">
+  <div class="card-header m-0">
+    <h5>{{title}}</h5>
+    <ul class="nav nav-pills card-header-pills">
+      <li class="nav-item">
+        {% if pill == '1' %}
+          <a class="nav-link active"  data-toggle="pill" href="#passport">Паспортная часть</a>
+        {% else %}
+          <a class="nav-link"  data-toggle="pill" href="#passport">Паспортная часть</a>
+        {% endif %}
+      </li>
+      {% if h != '0' %}
+      <li class="nav-item">
+        {% if pill == '2' %}
+          <a class="nav-link active" data-toggle="pill" href="#first">Первичное обращение</a>
+        {% else %}
+          <a class="nav-link" data-toggle="pill" href="#first">Первичное обращение</a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if pill == '3' %}
+          <a class="nav-link active" data-toggle="pill" href="#diagnoses">Диагнозы</a>
+        {% else %}
+          <a class="nav-link" data-toggle="pill" href="#diagnoses">Диагнозы</a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if pill == '4' %}
+          <a class="nav-link active" data-toggle="pill" href="#ambulance">Амбулаторные приемы</a>
+        {% else %}
+          <a class="nav-link" data-toggle="pill" href="#ambulance">Амбулаторные приемы</a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if pill == '5' %}
+          <a class="nav-link active" data-toggle="pill" href="#hospital">Госпитализации</a>
+        {% else %}
+          <a class="nav-link" data-toggle="pill" href="#hospital">Госпитализации</a>
+        {% endif %}
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Tab panes -->
+    <div class="tab-content">
+      {% if pill == '1' %}
+        <div class="tab-pane active mx-0" id="passport">
+      {% else %}
+        <div class="tab-pane fade mx-0" id="passport">
+          {% endif %}
+
+          {% block HistoryMainForm %}
+          <!-- Паспотрная часть-->
+          {{f_1.HistoryMainForm(HistoryMainForm)}}
+          {% endblock %}
+        </div>
+        {% if pill == '2' %}
+          <div class="tab-pane active mx-0" id="first">
+        {% else %}
+          <div class="tab-pane fade mx-0" id="first">
+        {% endif %}
+
+        {% block FirstForm %}
+        <!-- Первичное обращение-->
+        {{f_1.FirstForm(FirstForm, h, event, items, pill)}}
+        {% endblock %}
+
+        </div>
+        {% if pill == '3' %}
+          <div class="tab-pane active mx-0" id="diagnoses">
+        {% else %}
+          <div class="tab-pane fade mx-0" id="diagnoses">
+        {% endif %}
+
+        {% block DiagnosForm %}
+        <!-- Диагнозы-->
+        {{f_1.DiagnosForm(MainDiagnosForm, OtherDiagnosForm, diagnoses_items, h, pill)}}
+        {% endblock %}
+
+        </div>
+        <div class="tab-pane fade" id="ambulance">
+            Амбулаторные исследования
+        </div>
+        <div class="tab-pane fade" id="hospital">
+            Госпитализации
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+{% endblock %}

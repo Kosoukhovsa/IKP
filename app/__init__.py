@@ -38,4 +38,7 @@ def create_app(config_name):
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp)
 
+    from app.history import bp as history_bp
+    app.register_blueprint(history_bp)
+
     return app

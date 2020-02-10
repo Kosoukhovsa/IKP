@@ -311,13 +311,23 @@ class Patients(db.Model):
 #     #fio = db.Column(db.String(100))
     birthdate = db.Column(db.Date())
     sex = db.Column(db.String(1), index=True)
+    histories = db.relationship('Histories', backref='patients')
 
-    def __repr__(self):
-        return f'Пациент {self.snils}'
-
-    def get_snils_hash(self, snils):
+#  Создание хэш-значения для СНИЛС
+    @staticmethod
+    def get_snils_hash(snils):
         digest = md5(snils.lower().encode('utf-8')).hexdigest()
-        self.snils_hash = digest
+        return digest
+
+#  Проверка наличия пациента в базе
+    @staticmethod
+    def get_patient_by_snils(digest):
+        f_patient = Patients.query.filter(Patients.snils_hash==digest).first()
+        if f_patient is None:
+            return(None)
+        else:
+            return(f_patient)
+
 
 # Анкеты
 class Profiles(db.Model):
@@ -355,11 +365,12 @@ class Histories(db.Model):
     date_in = db.Column(db.Date())
     patient = db.Column(db.Integer(), db.ForeignKey('Patients.id'))
     research_group = db.Column(db.Integer(), db.ForeignKey('ResearchGroups.id'), index = True)
-    time_research_in = db.Column(db.DateTime())
-    time_research_out = db.Column(db.DateTime())
+    doctor_researcher = db.Column(db.Integer(), db.ForeignKey('Doctors.id'), index = True)
+    date_research_in = db.Column(db.Date())
+    date_research_out = db.Column(db.Date())
     reason = db.Column(db.Integer(), db.ForeignKey('Reasons.id'))
 
-# Диагнозы пациентов
+# События в рамках истории болезни
 class HistoryEvents(db.Model):
     __tablename__='HistoryEvents'
     id = db.Column(db.Integer(), primary_key=True)

@@ -32,8 +32,23 @@
       </li>
     </ul>
   </nav>
-{% endmacro%}
+{% endmacro %}
 
-{%  macro render_field(name, class='', value='', type='text') -%}
-<input type="{{type}}" name="{{name}}" value="{{value}}" class="{{class}}"/>
+{%  macro render_field(field) %}
+<div class="form-group">
+  {{field.label(class="form-control-label mx-1 my-1 font-weight-bold")}}
+  {{field(class="form-control mx-1 my-1")}}
+</div>
+{% endmacro %}
+
+{% macro renderfield_with_label(field) -%}
+<div class="form-group">
+  {{ field.label(class="form-control-label mx-1 my-1 font-weight-bold") }}
+  {{ field(**kwargs)|safe }}
+</div>
+<ul>
+    {% for error in field.errors %}
+        <li style="color:red;">{{ error }}</li>
+    {% endfor %}
+</ul>
 {%- endmacro %}
