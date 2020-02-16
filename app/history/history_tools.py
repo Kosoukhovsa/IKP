@@ -3,9 +3,10 @@ from app import db
 from app.history import bp
 from app.history.forms import HistoryFilterForm, HistoryMainForm, IndicatorsForm, IndicatorItemForm
 from app.models import Histories, Clinics, Diagnoses, Patients, Indicators, HistoryEvents,\
-                       IndicatorValues, DiagnosesItems
+                       IndicatorValues, DiagnosesItems, Events, Prosthesis
 from datetime import datetime
 from hashlib import md5
+from sqlalchemy import and_, or_, not_
 
 # Создание новой истории болезни
 def CreateHistory(MainForm):
@@ -84,9 +85,9 @@ def UpdateHistory(MainForm, h):
             return(history)
 
 # Заполнение формы истории болезни
-def FillHistoryForm(MainForm, FirstForm, MainDiagnosForm, h):
+def FillHistoryForm(MainForm, FirstForm, MainDiagnosForm, history):
     #MainForm = HistoryMainForm()
-    history = Histories.query.get(h)
+
     if history != None:
         patient = Patients.query.get(history.patient)
         MainForm.clinic.data = history.clinic
@@ -101,27 +102,13 @@ def FillHistoryForm(MainForm, FirstForm, MainDiagnosForm, h):
         MainForm.date_research_out.data = history.date_research_out
         MainForm.reason.data = history.reason
         # Список показателей первичного обращения
-        event = HistoryEvents.query.filter(HistoryEvents.history==h, HistoryEvents.event==1 ).first()
+        event = HistoryEvents.query.filter(HistoryEvents.history==history.id, HistoryEvents.event==1 ).first()
         FirstForm.date_begin.data = event.date_begin
-        indicators = IndicatorValues.query.filter(IndicatorValues.history==h, IndicatorValues.history_event==event.id).all()
-        items = []
-        for i in indicators:
-            item = {}
-            indicator = Indicators.query.get(i.indicator)
-            item['id'] = i.id
-            item['indicator'] = i.indicator
-            item['description'] = indicator.description
-            if i.num_value == None:
-                item['num_value'] = 0
-            else:
-                item['num_value'] = int(i.num_value)
-            if i.comment == None:
-                item['comment'] = ''
-            else:
-                item['comment'] = i.comment
-            items.append(item)
+        # Добавление показателей первичного обращения
+        items = event.get_indicators_values(11)
+
         # список сопутствующих диагнозов для отображения в форме
-        diagnoses = Diagnoses.query.filter(Diagnoses.history==h).all()
+        diagnoses = Diagnoses.query.filter(Diagnoses.history==history.id).all()
         diagnoses_items = []
         main_diagnos = None
         for d in diagnoses:
@@ -141,20 +128,33 @@ def FillHistoryForm(MainForm, FirstForm, MainDiagnosForm, h):
             MainDiagnosForm.side_damage.data = main_diagnos.side_damage
             MainDiagnosForm.date_created.data = main_diagnos.date_created
 
-        return([MainForm, FirstForm, MainDiagnosForm, event, items, diagnoses_items])
+        # Добавление амбулаторных приемов
+        ambulances = HistoryEvents.query.join(Events, Events.id==HistoryEvents.event).\
+                            filter(and_(HistoryEvents.history==history.id,  Events.type=='2')).all()
+        ambulance_events = []
+        for a in ambulances:
+            ambulance_item = Events.query.get(a.event)
+            item = {}
+            item['event_id'] = a.id
+            item['event_date'] = a.date_begin
+            item['event_name'] = ambulance_item.description
+            item['event_type'] = ambulance_item.id
+            ambulance_events.append(item)
+
+        return([MainForm, FirstForm, MainDiagnosForm, event, items, diagnoses_items, ambulance_events])
 
     else:
         # История не найдена
         return(None)
 
 # Добавление основного диагноза
-def AddMainDiagnos(MainDiagnosForm, h):
-    history = Histories.query.get(h)
+def AddMainDiagnos(MainDiagnosForm, history):
+
     main_diagnose = None
     if history is not None:
         # Создать или обновить основной диагноз
         # Основной диагноз может быть только один
-        main_diagnose = Diagnoses.query.filter(Diagnoses.history==h,Diagnoses.diagnose==MainDiagnosForm.diagnos.data).first()
+        main_diagnose = Diagnoses.query.filter(Diagnoses.history==history.id,Diagnoses.diagnose==MainDiagnosForm.diagnos.data).first()
         if main_diagnose is not None:
             # Такой диагноз уже есть
             # Обновить атрибуты
@@ -162,7 +162,7 @@ def AddMainDiagnos(MainDiagnosForm, h):
             main_diagnose.date_created = MainDiagnosForm.date_created.data
         else:
             # Такой основной диагноз еще отсутствует
-            diagnoses = Diagnoses.query.filter(Diagnoses.history==h).all()
+            diagnoses = Diagnoses.query.filter(Diagnoses.history==history.id).all()
             for d  in diagnoses:
                 diagnose_item = DiagnosesItems.query.get(d.diagnose)
                 if diagnose_item.type == 'Основной':
@@ -175,7 +175,7 @@ def AddMainDiagnos(MainDiagnosForm, h):
             if main_diagnose is None:
                 # Создаем основной диагноз
                 main_diagnose = Diagnoses()
-                main_diagnose.history = h
+                main_diagnose.history = history.id
                 main_diagnose.clinic = history.clinic
                 main_diagnose.patient = history.patient
                 main_diagnose.diagnose = MainDiagnosForm.diagnos.data
@@ -189,18 +189,18 @@ def AddMainDiagnos(MainDiagnosForm, h):
 
 
 # Добавление основного диагноза
-def AddOtherDiagnos(OtherDiagnosForm, h):
+def AddOtherDiagnos(OtherDiagnosForm, history):
     other_diagnose = None
     # Если диагноз уже добавлен - предупреждение
-    other_diagnose = Diagnoses.query.filter(Diagnoses.history==h,Diagnoses.diagnose==OtherDiagnosForm.diagnos.data).first()
+    other_diagnose = Diagnoses.query.filter(Diagnoses.history==history.id,Diagnoses.diagnose==OtherDiagnosForm.diagnos.data).first()
     if other_diagnose is not None:
         flash('Такой диагноз уже есть', category='warning')
         return(None)
 
     # Создаем новый диагноз
-    history = Histories.query.get(h)
+
     other_diagnose = Diagnoses()
-    other_diagnose.history = h
+    other_diagnose.history = history.id
     other_diagnose.clinic = history.clinic
     other_diagnose.patient = history.patient
     other_diagnose.diagnose = OtherDiagnosForm.diagnos.data
@@ -211,73 +211,140 @@ def AddOtherDiagnos(OtherDiagnosForm, h):
     return(other_diagnose)
 
 # Создание нового амбулаторного приема
-def CreateAmbulance(AmbulanceForm, h):
-    history = Histories.query.get(h)
-    ambulance = HistoryEvents.query.filter(HistoryEvents.history==h,HistoryEvents.event==2).first()
-    if ambulance is None:
+def CreateAmbulance(AmbulanceForm, history, event):
+
+    ambulance_event = HistoryEvents.query.filter(HistoryEvents.history==history.id,HistoryEvents.event==event.id).first()
+    if ambulance_event is None:
         # Создаем амбулаторный прием
-        ambulance = HistoryEvents()
-        ambulance.clinic = history.clinic
-        ambulance.history = history.id
-        ambulance.patient = history.patient
-        ambulance.event = 2
-        ambulance.date_begin = AmbulanceForm.date_begin.data
-        ambulance.doctor = AmbulanceForm.doctor.data
-        db.session.add(ambulance)
+        ambulance_event = HistoryEvents()
+        ambulance_event.clinic = history.clinic
+        ambulance_event.history = history.id
+        ambulance_event.patient = history.patient
+        ambulance_event.event = event.id
+        ambulance_event.date_begin = AmbulanceForm.date_begin.data
+        ambulance_event.doctor = AmbulanceForm.doctor.data
+        db.session.add(ambulance_event)
         # Показатели: Физические параметры (самооценка при первичном опросе)
         indicators = Indicators.query.filter(Indicators.group==11).all()
         for i in indicators:
             new_i = IndicatorValues()
-            new_i.clinic = ambulance.clinic
-            new_i.history = ambulance.history
-            new_i.patient = ambulance.patient
-            new_i.history_event = ambulance.id
+            new_i.clinic = ambulance_event.clinic
+            new_i.history = ambulance_event.history
+            new_i.patient = ambulance_event.patient
+            new_i.history_event = ambulance_event.id
             new_i.indicator = i.id
             db.session.add(new_i)
-        db.session.commit()
-    return(ambulance)
+        # Показатели: Телерентгенография
+        indicators = Indicators.query.filter(Indicators.group==3).all()
+        for i in indicators:
+            new_i = IndicatorValues()
+            new_i.clinic = ambulance_event.clinic
+            new_i.history = ambulance_event.history
+            new_i.patient = ambulance_event.patient
+            new_i.history_event = ambulance_event.id
+            new_i.indicator = i.id
+            db.session.add(new_i)
+        # Показатели: Рентгенография коленного сустава в двух проекциях
+        indicators = Indicators.query.filter(Indicators.group==2).all()
+        for i in indicators:
+            new_i = IndicatorValues()
+            new_i.clinic = ambulance_event.clinic
+            new_i.history = ambulance_event.history
+            new_i.patient = ambulance_event.patient
+            new_i.history_event = ambulance_event.id
+            new_i.indicator = i.id
+            new_i.slice = 'Передне-задняя проекция'
+            db.session.add(new_i)
+            new_i = IndicatorValues()
+            new_i.clinic = ambulance_event.clinic
+            new_i.history = ambulance_event.history
+            new_i.patient = ambulance_event.patient
+            new_i.history_event = ambulance_event.id
+            new_i.indicator = i.id
+            new_i.slice = 'Боковая проекция'
+            db.session.add(new_i)
+            new_i = IndicatorValues()
+            new_i.clinic = ambulance_event.clinic
+            new_i.history = ambulance_event.history
+            new_i.patient = ambulance_event.patient
+            new_i.history_event = ambulance_event.id
+            new_i.indicator = i.id
+            new_i.slice = 'Результат'
+            db.session.add(new_i)
+        # Показатели: Предоперационные обследования
+        indicators = Indicators.query.filter(Indicators.group==4).all()
+        for i in indicators:
+            new_i = IndicatorValues()
+            new_i.clinic = ambulance_event.clinic
+            new_i.history = ambulance_event.history
+            new_i.patient = ambulance_event.patient
+            new_i.history_event = ambulance_event.id
+            new_i.indicator = i.id
+            db.session.add(new_i)
 
-# Создание нового амбулаторного приема
-def UpdateAmbulance(AmbulanceForm, h, e):
-    history = Histories.query.get(h)
-    ambulance = HistoryEvents.query.get(e)
-    if ambulance is not None:
-        ambulance.doctor = AmbulanceForm.doctor.data
-        ambulance.date_begin = AmbulanceForm.date_begin.data
-        db.session.add(ambulance)
         db.session.commit()
+        return(ambulance_event)
+    else:
+        flash('Амбулаторный прием такого типа уже существует', category='warning')
+        return(None)
 
-    return(ambulance)
+# Обновление амбулаторного приема
+def UpdateAmbulance(AmbulanceForm, ambulance_event):
+
+        ambulance_event.doctor = AmbulanceForm.doctor.data
+        ambulance_event.date_begin = AmbulanceForm.date_begin.data
+        db.session.add(ambulance_event)
+        db.session.commit()
+        return(ambulance_event)
 
 
 # Заполнение формы амбулаторного посещения
-def FillAmbulanceForm(AmbulanceForm, history, event):
+def FillAmbulanceForm(AmbulanceForm, IndicatorsForm_, ProsthesisForm_, history, ambulance_event):
     #MainForm = HistoryMainForm()
-    if event != None:
-        AmbulanceForm.doctor.data = event.doctor
-        AmbulanceForm.date_begin.data = event.date_begin
-        indicators = IndicatorValues.query.filter(IndicatorValues.history==history.id, IndicatorValues.history_event==event.id).all()
-        items_11 = [] # Физические параметры
-        for i in indicators:
-            indicator = Indicators.query.get(i.indicator)
-            print(indicator.group)
-            if indicator.group == 11:
-                # Это физические параметры
-                item = {}
-                item['id'] = i.id
-                item['indicator'] = i.indicator
-                item['description'] = indicator.description
-                if i.num_value == None:
-                    item['num_value'] = 0
-                else:
-                    item['num_value'] = int(i.num_value)
-                if i.comment == None:
-                    item['comment'] = ''
-                else:
-                    item['comment'] = i.comment
-                items_11.append(item)
+    if ambulance_event != None:
+        AmbulanceForm.doctor.data = ambulance_event.doctor
+        AmbulanceForm.date_begin.data = ambulance_event.date_begin
+        IndicatorsForm_.date_begin.data = ambulance_event.date_begin
+        indicators = IndicatorValues.query.filter(IndicatorValues.history==history.id, IndicatorValues.history_event==ambulance_event.id).all()
+        # Физические параметры
+        items_11 = ambulance_event.get_indicators_values(11)
+        # Телерентгенография нижних конечностей
+        items_3 = ambulance_event.get_indicators_values(3)
+        # Список предоперационных обследований
+        items_4 = ambulance_event.get_indicators_values(4)        
+        # Рентгенография коленного сустава в двух проекциях
+        indicators_sliced_values = ambulance_event.get_indicators_values(2, indicators_list=[11,12,13])
 
-        return([AmbulanceForm, items_11])
+        # Рентгенография коленного сустава в двух проекциях: транспонирование списка
+        item = {}
+        items_2 = []
+        current_indicator = 11
+        for indicator_value in indicators_sliced_values:
+            #item['id'] = indicator_value.get('id')
+            if current_indicator != indicator_value.get('indicator'):
+                items_2.append(item)
+                current_indicator = indicator_value.get('indicator')
+                item = {}
+            item['indicator'] = indicator_value.get('indicator')
+            item['description'] = indicator_value.get('description')
+            slice = indicator_value.get('slice')
+            if slice == 'Передне-задняя проекция':
+                item['text_value_1'] = indicator_value.get('text_value')
+            if slice == 'Боковая проекция':
+                item['text_value_2'] = indicator_value.get('text_value')
+            if slice == 'Результат':
+                item['text_value_3'] = indicator_value.get('text_value')
+
+        items_2.append(item)
+
+        # Протезы
+        diagnosis = Diagnoses.query.join(DiagnosesItems, Diagnoses.diagnose==DiagnosesItems.id).\
+                                    filter(and_(Diagnoses.history==history.id, DiagnosesItems.type=='Основной')).first()
+
+        if diagnosis is not None:
+            ProsthesisForm_.prosthesis.data = diagnosis.prothes
+
+        return([AmbulanceForm, items_11, items_2, items_3, items_4])
 
     else:
         # История не найдена

@@ -5,7 +5,9 @@
 {% block page_content %}
 <div class="card">
   <div class="card-header m-0">
-    <h5>{{title}}</h5>
+    <h5>
+      <a href="{{ url_for('history.history_edit', h=h, pill=1) }}">История болезни {{history.hist_number}}</a>
+    </h5>
     <ul class="nav nav-pills card-header-pills">
       <li class="nav-item">
         {% if pill == '1' %}
@@ -14,7 +16,7 @@
           <a class="nav-link"  data-toggle="pill" href="#ambulance">Амбулаторный прием</a>
         {% endif %}
       </li>
-      {% if e != '0' %}
+      {% if h_e != '0' %}
       <li class="nav-item">
         {% if pill == '2' %}
           <a class="nav-link active" data-toggle="pill" href="#instrumental">Данные инструментальных исследований</a>
@@ -24,13 +26,20 @@
       </li>
       <li class="nav-item">
         {% if pill == '3' %}
-          <a class="nav-link active" data-toggle="pill" href="#teleroentgenography">Телерентгенография нижних конечностей</a>
+          <a class="nav-link active" data-toggle="pill" href="#protesis">Протез</a>
         {% else %}
-          <a class="nav-link" data-toggle="pill" href="#teleroentgenography">Телерентгенография нижних конечностей</a>
+          <a class="nav-link" data-toggle="pill" href="#protesis">Протез</a>
         {% endif %}
       </li>
       <li class="nav-item">
         {% if pill == '4' %}
+          <a class="nav-link active" data-toggle="pill" href="#telerentgenography">Телерентгенография нижних конечностей</a>
+        {% else %}
+          <a class="nav-link" data-toggle="pill" href="#telerentgenography">Телерентгенография нижних конечностей</a>
+        {% endif %}
+      </li>
+      <li class="nav-item">
+        {% if pill == '5' %}
           <a class="nav-link active" data-toggle="pill" href="#preoperative">Предоперационные обследования</a>
         {% else %}
           <a class="nav-link" data-toggle="pill" href="#preoperative">Предоперационные обследования</a>
@@ -44,35 +53,56 @@
 
     <!-- Tab panes -->
     <div class="tab-content">
+      <!-- Амбулаторный прием-->
       {% if pill == '1' %}
         <div class="tab-pane active mx-0" id="ambulance">
+          {{forms.AmbulanceForm(AmbulanceMainForm, h, history_event_id, event, items)}}
+        </div>
       {% else %}
         <div class="tab-pane fade mx-0" id="ambulance">
-      {% endif %}
-          <!-- Амбулаторный прием-->
-          <h6>История болезни {{history.hist_number}}</h6>
-          {{forms.AmbulanceForm(AmbulanceMainForm, h, e, items)}}
-
+          {{forms.AmbulanceForm(AmbulanceMainForm, h, history_event_id, event, items)}}
         </div>
+      {% endif %}
+
+
         {% if pill == '2' %}
           <div class="tab-pane active mx-0" id="instrumental">
+            {{forms.InstumentalForm(IndicatorsForm, h, history_event_id, items_2, pill)}}
+          </div>
         {% else %}
           <div class="tab-pane fade mx-0" id="instrumental">
+            {{forms.InstumentalForm(IndicatorsForm, h, history_event_id, items_2, pill)}}
+          </div>
         {% endif %}
 
-
-        </div>
         {% if pill == '3' %}
-          <div class="tab-pane active mx-0" id="teleroentgenography">
+          <div class="tab-pane active mx-0" id="protesis">
+            {{forms.Prosthesis(ProsthesisForm, h, history_event_id, pill)}}
+          </div>
         {% else %}
-          <div class="tab-pane fade mx-0" id="teleroentgenography">
+          <div class="tab-pane fade mx-0" id="protesis">
+            {{forms.Prosthesis(ProsthesisForm, h, history_event_id, pill)}}
+          </div>
         {% endif %}
 
-        </div>
         {% if pill == '4' %}
+          <div class="tab-pane active" id="telerentgenography">
+            {{forms.TelerentgenographyForm(TelerentgenographyForm, h, history_event_id, items_3, pill)}}
+          </div>
+        {% else %}
+          <div class="tab-pane fade" id="telerentgenography">
+            {{forms.TelerentgenographyForm(TelerentgenographyForm, h, history_event_id, items_3, pill)}}
+          </div>
+        {% endif %}
+
+        {% if pill == '5' %}
           <div class="tab-pane active" id="preoperative">
+            {{forms.PreoperativeForm(PreoperativeForm, h, history_event_id, items_4, pill)}}
+          </div>
         {% else %}
           <div class="tab-pane fade" id="preoperative">
+            {{forms.PreoperativeForm(PreoperativeForm, h, history_event_id, items_4, pill)}}
+          </div>
         {% endif %}
 
 
@@ -80,10 +110,6 @@
 
         </div>
       </div>
-    </div>
-  </div>
 
-</div>
-</div>
 
 {% endblock %}

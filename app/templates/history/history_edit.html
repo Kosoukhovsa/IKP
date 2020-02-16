@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
 {% import "_macros.html" as m %}
-{% import "history/_HistoryMainForm.html" as f_1 %}
+{% import "history/_HistoryMainForm.html" as forms %}
 {% block page_content %}
 <div class="card">
   <div class="card-header m-0">
@@ -51,53 +51,56 @@
 
     <!-- Tab panes -->
     <div class="tab-content">
+      <!-- Паспотрная часть-->
       {% if pill == '1' %}
         <div class="tab-pane active mx-0" id="passport">
+          {{forms.HistoryMainForm(HistoryMainForm)}}
+        </div>
       {% else %}
         <div class="tab-pane fade mx-0" id="passport">
-          {% endif %}
-
-          {% block HistoryMainForm %}
-          <!-- Паспотрная часть-->
-          {{f_1.HistoryMainForm(HistoryMainForm)}}
-          {% endblock %}
+          {{forms.HistoryMainForm(HistoryMainForm)}}
         </div>
+      {% endif %}
+
+      <!-- Первичное обращение-->
         {% if pill == '2' %}
           <div class="tab-pane active mx-0" id="first">
+            {{forms.FirstForm(FirstForm, h, history_event_id, items, pill)}}
+          </div>
         {% else %}
           <div class="tab-pane fade mx-0" id="first">
+            {{forms.FirstForm(FirstForm, h, history_event_id, items, pill)}}
+          </div>
         {% endif %}
 
-        {% block FirstForm %}
-        <!-- Первичное обращение-->
-        {{f_1.FirstForm(FirstForm, h, event, items, pill)}}
-        {% endblock %}
-
-        </div>
+        <!-- Диагнозы-->
         {% if pill == '3' %}
           <div class="tab-pane active mx-0" id="diagnoses">
+            {{forms.DiagnosForm(MainDiagnosForm, OtherDiagnosForm, diagnoses_items, h, pill)}}
+          </div>
         {% else %}
           <div class="tab-pane fade mx-0" id="diagnoses">
+            {{forms.DiagnosForm(MainDiagnosForm, OtherDiagnosForm, diagnoses_items, h, pill)}}
+          </div>
         {% endif %}
 
-        {% block DiagnosForm %}
-        <!-- Диагнозы-->
-        {{f_1.DiagnosForm(MainDiagnosForm, OtherDiagnosForm, diagnoses_items, h, pill)}}
-        {% endblock %}
-
+      <!-- Амбулаторное посещение-->
+      {% if pill == '4' %}
+        <div class="tab-pane active" id="ambulance">
+          {{forms.AmbulanceListForm(h,ambulance_events, NewAmbulanceForm)}}
         </div>
+      {% else %}
         <div class="tab-pane fade" id="ambulance">
-            Амбулаторные исследования
+          {{forms.AmbulanceListForm(h,ambulance_events, NewAmbulanceForm)}}
         </div>
+      {% endif %}
+
+
         <div class="tab-pane fade" id="hospital">
             Госпитализации
         </div>
         </div>
       </div>
     </div>
-  </div>
-
-</div>
-</div>
 
 {% endblock %}

@@ -4,7 +4,8 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, Selec
 from wtforms.fields.html5 import DateField
 from wtforms.fields import TextField
 from wtforms.validators import ValidationError, DataRequired, Optional, Email, EqualTo, Length, Regexp
-from app.models import Patients, Clinics, ResearchGroups, Reasons, DiagnosesItems, Doctors
+from app.models import Patients, Clinics, ResearchGroups, Reasons, DiagnosesItems, Doctors, Events, Prosthesis
+
 
 
 # -- Форма фильтрации историй болезни
@@ -55,7 +56,15 @@ class IndicatorItemForm(FlaskForm):
 
 class IndicatorsForm(FlaskForm):
     #hist_number = StringField('Номер истории болезни', validators=[DataRequired())
-    date_begin = DateField('Дата первичного обращения', validators=[DataRequired()])
+    date_begin = DateField('Дата')
+
+class TelerentgenographyForm(FlaskForm):
+    #hist_number = StringField('Номер истории болезни', validators=[DataRequired())
+    date_begin = DateField('Дата')
+
+class PreoperativeForm(FlaskForm):
+    #hist_number = StringField('Номер истории болезни', validators=[DataRequired())
+    date_begin = DateField('Дата')
 
 # -- Основной диагноз
 class HistoryMainDiagnosForm(FlaskForm):
@@ -84,6 +93,7 @@ class HistoryOtherDiagnosForm(FlaskForm):
 # -- Амбулаторный прием - заголовок
 class AmbulanceMainForm(FlaskForm):
     doctor = SelectField('Доктор', coerce = int, validators=[DataRequired()])
+    event = SelectField('Вид амбулаторного приема', coerce = int, validators=[DataRequired()])
     date_begin = DateField('Дата приема', validators=[DataRequired()])
     submit = SubmitField('Сохранить')
 
@@ -91,3 +101,25 @@ class AmbulanceMainForm(FlaskForm):
         super(AmbulanceMainForm, self).__init__(*args, **kwargs)
         self.doctor.choices=[(doctor.id, doctor.fio)
                               for doctor in Doctors.query.order_by(Doctors.fio).all()]
+        self.event.choices=[(event.id, event.description)
+                              for event in Events.query.filter(Events.type=='2').order_by(Events.id).all()]
+
+
+# -- История болезни: список амбулаторных приемов. Создание нового
+class HistioryNewAmbulanceForm(FlaskForm):
+    event = SelectField('Вид амбулаторного приема', coerce = int, validators=[DataRequired()])
+    submit = SubmitField('Создать')
+
+    def __init__(self, *args, **kwargs):
+        super(HistioryNewAmbulanceForm, self).__init__(*args, **kwargs)
+        self.event.choices=[(event.id, event.description)
+                              for event in Events.query.filter(Events.type=='2').order_by(Events.id).all()]
+
+class ProsthesisForm(FlaskForm):
+    prosthesis = SelectField('Протез', coerce = int, validators=[DataRequired()])
+    submit = SubmitField('Сохранить')
+
+    def __init__(self, *args, **kwargs):
+        super(ProsthesisForm, self).__init__(*args, **kwargs)
+        self.prosthesis.choices=[(prosthesis.id, prosthesis.description)
+                              for prosthesis in Prosthesis.query.all()]

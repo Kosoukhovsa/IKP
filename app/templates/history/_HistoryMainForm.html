@@ -22,12 +22,13 @@
   </form>
 {% endmacro %}
 
-{% macro FirstForm(FirstForm, h, event, items, pill) %}
-<form class="form bg-light" method="POST" action="{{url_for('history.save_indicators', h=h, e=event, pill=2)}}">
+{% macro FirstForm(FirstForm, h, history_event_id, items, pill) %}
+<form class="form bg-light" method="POST" action="{{url_for('history.save_indicators', h=h, h_e=history_event_id, pill=2)}}">
   {{FirstForm.csrf_token()}}
   <div class="form-row">
     <div class="col-3">
       {{ m.render_field(FirstForm.date_begin) }}
+      <input id="indicator_group" type = "hidden" class="form-control" name="indicator_group" type="number" value=11>
     </div>
   </div>
   <div>
@@ -36,7 +37,7 @@
         <tr>
           <th scope="col">Показатель</th>
           <th scope="col">Значение</th>
-          <th scope="col">Комментарий</th>
+          <th scope="col">Ед. измерения</th>
         </tr>
       </thead>
       <tbody>
@@ -45,10 +46,10 @@
           <input id="indicator_id" type = "hidden" class="form-control" name="indicator_id" type="number" value={{i.id}}>
           <td>{{i.description}}</td>
           <td>
-            <input id="num_value" class="form-control" name="num_value" type="number" step="1" value={{i.num_value}}>
+            <input id="num_value" class="form-control" name="num_value" type="number" step="1" max=250 value={{i.num_value}}>
           </td>
           <td>
-            <input id="comment" class="form-control" name="comment" type="text" value={{i.comment}}>
+            <a>{{i.unit}}</a>
           </td>
         </tr>
         {% endfor %}
@@ -104,4 +105,40 @@
     {% endfor %}
   </tbody>
 </table>
+{% endmacro %}
+
+{% macro AmbulanceListForm(h, ambulance_events, NewAmbulanceForm) %}
+
+<form class="form-inline bg-light border" method="post">
+  {{NewAmbulanceForm.csrf_token()}}
+  {{ m.render_field(NewAmbulanceForm.event) }}
+  {{NewAmbulanceForm.submit(class='btn btn-primary')}}
+</form>
+
+<table class="table">
+  <thead class="thead-light">
+    <tr>
+      <th scope="col">Дата</th>
+      <th scope="col">Вид амбулаторного приема</th>
+    </tr>
+  </thead>
+  <tbody>
+     {% for ambulance_event in ambulance_events %}
+    <tr>
+
+      <td>
+        <a href="{{ url_for('history.ambulance_edit', h=h, h_e=ambulance_event.event_id,
+                            e_type=ambulance_event.event_type, pill=1) }}">{{ambulance_event.event_date}}</a>
+      </td>
+      <td>
+        <a>{{ambulance_event.event_name}}</a>
+      </td>
+
+    </tr>
+    {% endfor %}
+
+  </tbody>
+</table>
+
+
 {% endmacro %}

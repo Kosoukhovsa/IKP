@@ -276,6 +276,7 @@ class Indicators(db.Model):
     is_calculated = db.Column(db.Boolean)
     group = db.Column(db.Integer(), db.ForeignKey('IndicatorsGroups.id'), index = True)
     unit = db.Column(db.String(20), unique=False)
+    type = db.Column(db.String(20), unique=False)
     def_values = db.relationship('IndicatorsDefs', backref='def_indicators')
     norm_values = db.relationship('IndicatorsNorms', backref='norm_indicators')
 
@@ -387,6 +388,61 @@ class HistoryEvents(db.Model):
     days2 = db.Column(db.Integer()) #предоперационный койко-день
     days3 = db.Column(db.Integer()) #послеоперационный койко-день
 
+
+    def get_indicators_values(self, indicators_group, **kwargs):
+        """
+        Выбор показателей события
+        Параметры:
+        indicators_group - код группы
+        indicators_list - список показателей (опционально)
+
+        """
+        indicators_list = kwargs.get('indicators_list',None)
+
+        # Выбор всех показателей из группы
+        indicators_values = IndicatorValues.query.join(Indicators, IndicatorValues.indicator==Indicators.id).\
+                    filter(IndicatorValues.history_event==self.id, Indicators.group==indicators_group).all()
+
+        items = []
+        for i in indicators_values:
+            indicator = Indicators.query.get(i.indicator)
+            if indicators_list and indicator.id not in indicators_list:
+                continue
+            indicator_norms = IndicatorsNorms.query.filter(IndicatorsNorms.indicator==indicator.id).first()
+                # Это физические параметры,
+                #       телерентгенография
+            item = {}
+            item['id'] = i.id
+            item['indicator'] = i.indicator
+            item['slice'] = i.slice
+            item['description'] = indicator.description
+            if i.num_value == None:
+                item['num_value'] = 0
+            else:
+                if indicator.type == 'integer':
+                    item['num_value'] = int(i.num_value)
+                else:
+                    item['num_value'] = i.num_value
+            if i.comment == None:
+                item['comment'] = ''
+            else:
+                item['comment'] = i.comment
+            if i.text_value == None:
+                item['text_value'] = ''
+            else:
+                item['text_value'] = i.text_value
+            if indicator.unit == None:
+                item['unit'] = ''
+            else:
+                item['unit'] = indicator.unit
+            if indicator_norms:
+                item['nvalue_from'] = indicator_norms.nvalue_from
+                item['nvalue_to'] = indicator_norms.nvalue_from
+            items.append(item)
+
+        return(items)
+
+
 # Диагнозы
 class Diagnoses(db.Model):
     __tablename__='Diagnoses'
@@ -410,6 +466,7 @@ class IndicatorValues(db.Model):
     indicator = db.Column(db.Integer(), db.ForeignKey('Indicators.id'))
     slice = db.Column(db.String(100))
     time_created = db.Column(db.DateTime(), default=datetime.utcnow())
+    date_value = db.Column(db.Date())
     text_value = db.Column(db.String(100))
     num_value = db.Column(db.Numeric())
     num_deviation = db.Column(db.Numeric())
@@ -594,7 +651,8 @@ class LoadDictionary():
                                description=i['description'],
                                is_calculated=i['is_calculated'],
                                group=i['group'],
-                               unit=i['unit']
+                               unit=i['unit'],
+                               type=i['type']
                                )
             db.session.add(new_c)
         db.session.commit()
